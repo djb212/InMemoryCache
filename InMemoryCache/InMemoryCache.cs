@@ -9,11 +9,16 @@
     /// Initialises a new instance of the InMemoryCache class with a specified capacity.
     /// </remarks>
     /// <param name="capacity">Maximum number of items to be stored in cache</param>
-    public class InMemoryCache<TKey, TValue>(int capacity) where TKey : notnull
+    public class InMemoryCache<TKey, TValue>(int capacity = 256) where TKey : notnull
     {
         private Dictionary<TKey, TValue> _dictionary = new Dictionary<TKey, TValue>();
         private LinkedList<TKey> _lruList = new LinkedList<TKey>();
         private int _capacity = capacity;
+
+        public int Capacity
+        {
+            get { return _capacity; }
+        }
 
         /// <summary>
         /// Adds key-value pair to the cache. If key already exists, throws ArgumentException.
@@ -66,6 +71,72 @@
                 else
                 {
                     throw new KeyNotFoundException("Key not found");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Tries to add a key-value pair to the cache. Returns false if key already exists.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <returns>Success boolean</returns>
+        public bool TryAdd(TKey key, TValue value)
+        {
+            try
+            {
+                Add(key, value);
+                return true;
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Tries to retrieve the value of a specified key. Returns false if key is not present in cache.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <returns>Success boolean</returns>
+        public bool TryRetrieve(TKey key, out TValue value)
+        {
+            try
+            {
+                value = Retrieve(key);
+                return true;
+            }
+            catch (KeyNotFoundException)
+            {
+                value = default!;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Checks if the cache contains a specified key.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns>Boolean</returns>
+        public bool ContainsKey(TKey key)
+        {
+            lock (_lruList)
+            {
+                return _dictionary.ContainsKey(key);
+            }
+        }
+
+        /// <summary>
+        /// Gets the current number of items in the cache.
+        /// </summary>
+        public int Count
+        {
+            get
+            {
+                lock (_lruList)
+                {
+                    return _dictionary.Count;
                 }
             }
         }
